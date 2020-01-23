@@ -54,6 +54,10 @@ struct _GstHlsSink
   GstSegment segment;
   gboolean waiting_fku;
   GstClockTime last_running_time;
+  gint encryption_method;
+  gchar *key_location;
+  gchar *key_uri;
+  unsigned char key[16];
 };
 
 struct _GstHlsSinkClass
