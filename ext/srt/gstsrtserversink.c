@@ -199,7 +199,7 @@ idle_listen_callback (gpointer data)
   SRTClient *client;
   SRTSOCKET ready[2];
   struct sockaddr sa;
-  int sa_len;
+  int sa_len = sizeof (struct sockaddr);
 
   if (srt_epoll_wait (priv->poll_id, ready, &(int) {
           2}, 0, 0, priv->poll_timeout, 0, 0, 0, 0) == -1) {

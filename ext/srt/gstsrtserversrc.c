@@ -158,7 +158,7 @@ gst_srt_server_src_fill (GstPushSrc * src, GstBuffer * outbuf)
   SRTSOCKET ready[2];
   gint recv_len;
   struct sockaddr client_sa;
-  size_t client_sa_len;
+  size_t client_sa_len = sizeof (struct sockaddr);
 
   while (!priv->has_client) {
     GST_DEBUG_OBJECT (self, "poll wait (timeout: %d)", priv->poll_timeout);
