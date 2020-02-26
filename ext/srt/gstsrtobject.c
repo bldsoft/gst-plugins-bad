@@ -35,6 +35,8 @@
 GST_DEBUG_CATEGORY_EXTERN (gst_debug_srtobject);
 #define GST_CAT_DEFAULT gst_debug_srtobject
 
+const int RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION = 1;
+
 enum
 {
   PROP_URI = 1,
@@ -47,6 +49,7 @@ enum
   PROP_LATENCY,
   PROP_MSG_SIZE,
   PROP_STATS,
+  PROP_GSTSRTOBJECT_C_PATCH_VERSION,
   PROP_LAST
 };
 
@@ -336,6 +339,9 @@ gst_srt_object_get_property_helper (GstSRTObject * srtobject,
     case PROP_STATS:
       g_value_take_boxed (value, gst_srt_object_get_stats (srtobject));
       break;
+    case PROP_GSTSRTOBJECT_C_PATCH_VERSION:
+      g_value_set_uint (value, RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION);
+      break;
     default:
       return FALSE;
   }
@@ -453,6 +459,11 @@ gst_srt_object_install_properties_helper (GObjectClass * gobject_class)
   g_object_class_install_property (gobject_class, PROP_STATS,
       g_param_spec_boxed ("stats", "Statistics",
           "SRT Statistics", GST_TYPE_STRUCTURE,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+
+   g_object_class_install_property (gobject_class, PROP_GSTSRTOBJECT_C_PATCH_VERSION,
+      g_param_spec_uint ("gstsrtobject-c-patch-version", "Version of patch for gstsrtobject.c",
+          "gstsrtobject.c version", 0 , G_MAXUINT, RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 
 }
