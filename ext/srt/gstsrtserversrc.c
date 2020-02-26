@@ -53,6 +53,7 @@ static GstStaticPadTemplate src_template = GST_STATIC_PAD_TEMPLATE ("src",
 #define GST_CAT_DEFAULT gst_debug_srt_server_src
 GST_DEBUG_CATEGORY (GST_CAT_DEFAULT);
 
+const uint RIXJOB_GSTSRTSERVERSRC_C_PATCH_VERSION = 1;
 struct _GstSRTServerSrcPrivate
 {
   SRTSOCKET sock;
@@ -74,6 +75,7 @@ enum
   PROP_POLL_TIMEOUT = 1,
 
   /*< private > */
+  PROP_GSTSRTSERVERSRC_C_PATCH_VERSION ,
   PROP_LAST
 };
 
@@ -105,6 +107,9 @@ gst_srt_server_src_get_property (GObject * object,
   switch (prop_id) {
     case PROP_POLL_TIMEOUT:
       g_value_set_int (value, priv->poll_timeout);
+      break;
+    case PROP_GSTSRTSERVERSRC_C_PATCH_VERSION:
+      g_value_set_uint (value, RIXJOB_GSTSRTSERVERSRC_C_PATCH_VERSION);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -450,6 +455,12 @@ gst_srt_server_src_class_init (GstSRTServerSrcClass * klass)
       g_param_spec_int ("poll-timeout", "Poll timeout",
       "Return poll wait after timeout miliseconds", 0, G_MAXINT32,
       SRT_DEFAULT_POLL_TIMEOUT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+  properties[PROP_GSTSRTSERVERSRC_C_PATCH_VERSION] =
+      g_param_spec_uint ("gstsrtserversrc-c-patch-version", "Version of patch for gstsrtserversrc.c file",
+      "gstsrtserversrc.c patch version", 0,
+      G_MAXUINT, RIXJOB_GSTSRTSERVERSRC_C_PATCH_VERSION,
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, properties);
 

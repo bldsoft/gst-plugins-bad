@@ -46,6 +46,8 @@
 
 #define SRT_DEFAULT_POLL_TIMEOUT -1
 
+const uint RIXJOB_GSTSRTSERVERSINK_C_PATCH_VERSION = 1;
+
 static GstStaticPadTemplate sink_template = GST_STATIC_PAD_TEMPLATE ("sink",
     GST_PAD_SINK,
     GST_PAD_ALWAYS,
@@ -78,6 +80,7 @@ enum
   PROP_POLL_TIMEOUT = 1,
   PROP_STATS,
   /*< private > */
+  PROP_GSTSRTSERVERSINK_C_PATCH_VERSION,
   PROP_LAST
 };
 
@@ -166,6 +169,9 @@ gst_srt_server_sink_get_property (GObject * object,
       GST_OBJECT_UNLOCK (self);
       break;
     }
+    case PROP_GSTSRTSERVERSINK_C_PATCH_VERSION:
+      g_value_set_uint(value, RIXJOB_GSTSRTSERVERSINK_C_PATCH_VERSION);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -528,6 +534,12 @@ gst_srt_server_sink_class_init (GstSRTServerSinkClass * klass)
           "Statistics for one client", GST_TYPE_STRUCTURE,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS),
       G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+  properties[PROP_GSTSRTSERVERSINK_C_PATCH_VERSION] =
+      g_param_spec_uint ("gstsrtserversink-c-patch-version", "Version of patch for gstsrtserversink.c file",
+      "gstsrtserversink.c patch version", 0,
+      G_MAXUINT, RIXJOB_GSTSRTSERVERSINK_C_PATCH_VERSION,
+      G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
   g_object_class_install_properties (gobject_class, PROP_LAST, properties);
 
