@@ -35,6 +35,8 @@
 GST_DEBUG_CATEGORY_EXTERN (gst_debug_srtobject);
 #define GST_CAT_DEFAULT gst_debug_srtobject
 
+const int RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION = 1;
+
 enum
 {
   PROP_URI = 1,
@@ -48,6 +50,7 @@ enum
   PROP_MSG_SIZE,
   PROP_STATS,
   PROP_WAIT_FOR_CONNECTION,
+  PROP_GSTSRTOBJECT_C_PATCH_VERSION,
   PROP_LAST
 };
 
@@ -368,6 +371,8 @@ gst_srt_object_get_property_helper (GstSRTObject * srtobject,
       break;
     case PROP_WAIT_FOR_CONNECTION:
       g_value_set_boolean (value, srtobject->wait_for_connection);
+    case PROP_GSTSRTOBJECT_C_PATCH_VERSION:
+      g_value_set_uint (value, RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION);
       break;
     default:
       goto err;
@@ -505,6 +510,11 @@ gst_srt_object_install_properties_helper (GObjectClass * gobject_class)
           "Block the stream until a client connects",
           GST_SRT_DEFAULT_WAIT_FOR_CONNECTION,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+
+   g_object_class_install_property (gobject_class, PROP_GSTSRTOBJECT_C_PATCH_VERSION,
+      g_param_spec_uint ("gstsrtobject-c-patch-version", "Version of patch for gstsrtobject.c",
+          "gstsrtobject.c version", 0 , G_MAXUINT, RIXJOB_GSTSRTOBJECT_C_PATCH_VERSION,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -661,7 +671,7 @@ thread_func (gpointer data)
     struct sockaddr_storage ss;
     struct sockaddr sa;
   } caller_sa;
-  int caller_sa_len;
+  int caller_sa_len = sizeof (caller_sa);
 
   gint poll_timeout;
 
