@@ -64,6 +64,7 @@ enum
   PROP_TARGET_DURATION,
   PROP_PLAYLIST_LENGTH,
   PROP_SEND_KEYFRAME_REQUESTS,
+  PROP_SPLITMUXSINK,
 };
 
 enum
@@ -240,6 +241,9 @@ gst_hls_sink2_class_init (GstHlsSink2Class * klass)
           "then the input must have keyframes in regular intervals",
           DEFAULT_SEND_KEYFRAME_REQUESTS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_SPLITMUXSINK,
+      g_param_spec_object ("splitmuxsink", "splitmuxsink element",
+          "splitmuxsink element", GST_TYPE_ELEMENT, G_PARAM_READABLE));
 
   /**
    * GstHlsSink2::get-playlist-stream:
@@ -663,6 +667,9 @@ gst_hls_sink2_get_property (GObject * object, guint prop_id,
       break;
     case PROP_SEND_KEYFRAME_REQUESTS:
       g_value_set_boolean (value, sink->send_keyframe_requests);
+      break;
+    case PROP_SPLITMUXSINK:
+      g_value_set_object (value, sink->splitmuxsink);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
