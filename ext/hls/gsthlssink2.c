@@ -188,7 +188,7 @@ gst_hls_sink2_class_init (GstHlsSink2Class * klass)
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_SPLITMUXSINK,
       g_param_spec_object ("splitmuxsink", "splitmuxsink element",
-          "splitmuxsink element", G_TYPE_ELEMENT, G_PARAM_READABLE));
+          "splitmuxsink element", GST_TYPE_ELEMENT, G_PARAM_READABLE));
 }
 
 static void
