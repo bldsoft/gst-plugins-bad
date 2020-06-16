@@ -61,7 +61,8 @@ enum
   PROP_PLAYLIST_ROOT,
   PROP_MAX_FILES,
   PROP_TARGET_DURATION,
-  PROP_PLAYLIST_LENGTH
+  PROP_PLAYLIST_LENGTH,
+  PROP_SPLITMUXSINK,
 };
 
 static GstStaticPadTemplate video_template = GST_STATIC_PAD_TEMPLATE ("video",
@@ -177,6 +178,9 @@ gst_hls_sink2_class_init (GstHlsSink2Class * klass)
           "the playlist will be infinite.",
           0, G_MAXUINT, DEFAULT_PLAYLIST_LENGTH,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_SPLITMUXSINK,
+      g_param_spec_object ("splitmuxsink", "splitmuxsink element",
+          "splitmuxsink element", GST_TYPE_ELEMENT, G_PARAM_READABLE));
 }
 
 static void
@@ -463,6 +467,9 @@ gst_hls_sink2_get_property (GObject * object, guint prop_id,
       break;
     case PROP_PLAYLIST_LENGTH:
       g_value_set_uint (value, sink->playlist_length);
+      break;
+    case PROP_SPLITMUXSINK:
+      g_value_set_object (value, sink->splitmuxsink);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
