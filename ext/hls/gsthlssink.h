@@ -58,6 +58,7 @@ struct _GstHlsSink
   gchar *key_location;
   gchar *key_uri;
   unsigned char key[16];
+  gboolean show_program_date_time;
 };
 
 struct _GstHlsSinkClass

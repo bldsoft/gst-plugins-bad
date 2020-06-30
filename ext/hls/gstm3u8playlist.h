@@ -61,6 +61,19 @@ gboolean          gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist,
                                                guint             index,
                                                gboolean          discontinuous);
 
+gboolean gst_m3u8_playlist_add_entry_with_date(GstM3U8Playlist * playlist,
+                                               const gchar     * url,
+                                               const gchar     * title,
+                                               gfloat            duration,
+                                               guint             index,
+                                               gboolean          discontinuous,
+#if GLIB_CHECK_VERSION(2, 62, 0)
+                                               GDateTime       * program_date_time
+#else
+                                               GTimeVal          program_date_time
+#endif
+);
+
 gchar *           gst_m3u8_playlist_render (GstM3U8Playlist * playlist);
 
 G_END_DECLS

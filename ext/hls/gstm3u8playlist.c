@@ -44,11 +44,22 @@ struct _GstM3U8Entry
   gchar *title;
   gchar *url;
   gboolean discontinuous;
+#if GLIB_CHECK_VERSION(2, 62, 0)
+  GDateTime *program_date_time;
+#else
+  GTimeVal program_date_time;
+#endif
 };
 
 static GstM3U8Entry *
 gst_m3u8_entry_new (const gchar * url, const gchar * title,
-    gfloat duration, gboolean discontinuous)
+    gfloat duration, gboolean discontinuous,
+#if GLIB_CHECK_VERSION(2, 62, 0)
+    GDateTime * program_date_time
+#else
+    GTimeVal program_date_time
+#endif
+    )
 {
   GstM3U8Entry *entry;
 
@@ -59,6 +70,8 @@ gst_m3u8_entry_new (const gchar * url, const gchar * title,
   entry->title = g_strdup (title);
   entry->duration = duration;
   entry->discontinuous = discontinuous;
+  entry->program_date_time = program_date_time;
+
   return entry;
 }
 
@@ -69,6 +82,9 @@ gst_m3u8_entry_free (GstM3U8Entry * entry)
 
   g_free (entry->url);
   g_free (entry->title);
+#if GLIB_CHECK_VERSION(2, 62, 0)
+  g_date_time_unref (entry->program_date_time);
+#endif
   g_free (entry);
 }
 
@@ -106,6 +122,30 @@ gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist,
     const gchar * url, const gchar * title,
     gfloat duration, guint index, gboolean discontinuous)
 {
+#if !GLIB_CHECK_VERSION (2, 62, 0)
+  GTimeVal empty_time = { };
+#endif
+  return gst_m3u8_playlist_add_entry_with_date (playlist, url, title, duration,
+      index, discontinuous,
+#if GLIB_CHECK_VERSION (2, 62, 0)
+      NULL
+#else
+      empty_time
+#endif
+      );
+}
+
+gboolean
+gst_m3u8_playlist_add_entry_with_date (GstM3U8Playlist * playlist,
+    const gchar * url, const gchar * title,
+    gfloat duration, guint index, gboolean discontinuous,
+#if GLIB_CHECK_VERSION(2, 62, 0)
+    GDateTime * program_date_time
+#else
+    GTimeVal program_date_time
+#endif
+    )
+{
   GstM3U8Entry *entry;
 
   g_return_val_if_fail (playlist != NULL, FALSE);
@@ -114,7 +154,8 @@ gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist,
   if (playlist->type == GST_M3U8_PLAYLIST_TYPE_VOD)
     return FALSE;
 
-  entry = gst_m3u8_entry_new (url, title, duration, discontinuous);
+  entry = gst_m3u8_entry_new (url, title, duration, discontinuous,
+      program_date_time);
 
   if (playlist->window_size > 0) {
     /* Delete old entries from the playlist */
@@ -145,17 +186,17 @@ gst_m3u8_playlist_target_duration (GstM3U8Playlist * playlist)
       target_duration = entry->duration;
   }
 
-  return (guint) ceil((target_duration + 500.0 * GST_MSECOND) / GST_SECOND);
+  return (guint) ceil ((target_duration + 500.0 * GST_MSECOND) / GST_SECOND);
 }
 
 static const gchar *
 encryption_method_to_string (gint method)
 {
-  static const gchar * encryption_methods[] = {
+  static const gchar *encryption_methods[] = {
     "NONE",
     "AES-128"
   };
-  gsize nmethods = sizeof(encryption_methods) / sizeof(encryption_methods[0]);
+  gsize nmethods = sizeof (encryption_methods) / sizeof (encryption_methods[0]);
   return method >= 0 && method < nmethods ? encryption_methods[method] : NULL;
 }
 
@@ -183,8 +224,8 @@ gst_m3u8_playlist_render (GstM3U8Playlist * playlist)
 
   if (playlist->encryption_method && playlist->key_location) {
     g_string_append_printf (playlist_str, "#EXT-X-KEY:METHOD=%s,URI=\"%s\"\n",
-      encryption_method_to_string(playlist->encryption_method),
-      playlist->key_location);
+        encryption_method_to_string (playlist->encryption_method),
+        playlist->key_location);
   }
 
   g_string_append (playlist_str, "\n");
@@ -201,9 +242,23 @@ gst_m3u8_playlist_render (GstM3U8Playlist * playlist)
           (gint) ((entry->duration + 500 * GST_MSECOND) / GST_SECOND),
           entry->title ? entry->title : "");
     } else {
+      gchar *time_iso8601 = NULL;
+#if GLIB_CHECK_VERSION(2, 62, 0)
+      if (entry->program_date_time)
+        time_iso8601 = g_date_time_format_iso8601 (entry->program_date_time)
+#else
+      if (entry->program_date_time.tv_sec != 0)
+        time_iso8601 = g_time_val_to_iso8601 (&entry->program_date_time);
+#endif
+
+      if (l == playlist->entries->head && time_iso8601)
+        g_string_append_printf (playlist_str, "#EXT-X-PROGRAM-DATE-TIME:%s\n",
+            time_iso8601);
+
       g_string_append_printf (playlist_str, "#EXTINF:%.6f,%s\n",
-          entry->duration / GST_SECOND,
-          entry->title ? entry->title : "");
+          entry->duration / GST_SECOND, entry->title ? entry->title : "");
+
+      g_free (time_iso8601);
     }
 
     g_string_append_printf (playlist_str, "%s\n", entry->url);
