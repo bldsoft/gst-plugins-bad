@@ -635,10 +635,11 @@ gst_hls_sink_handle_message (GstBin * bin, GstMessage * message)
       filename = gst_structure_get_string (structure, "filename");
       gst_structure_get_clock_time (structure, "running-time", &running_time);
       duration = running_time - sink->last_running_time;
-      sink->last_running_time = running_time;
 
       program_date_time = g_date_time_add_seconds (sink->start_time,
-          running_time / (double) GST_SECOND);
+          sink->last_running_time / (double) GST_SECOND);
+
+      sink->last_running_time = running_time;
 
       GST_INFO_OBJECT (sink, "COUNT %d", sink->index);
       if (sink->playlist_root == NULL)
