@@ -60,7 +60,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_hls_sink_debug);
 #define DEFAULT_ENCRYPTION_METHOD 0     /* no encryption */
 #define DEFAULT_KEY_LOCATION "playlist.key"
 #define DEFAULT_KEY_URI "playlist.key"
-#define DEFAULT_PROGRAM_DATE_TIME_MODE 2        /* all chunks */
+#define DEFAULT_PROGRAM_DATE_TIME_MODE GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS
 
 #define GST_M3U8_PLAYLIST_VERSION 3
 
@@ -162,13 +162,6 @@ gst_hls_sink_encryption_method_get_type (void)
   return encryption_type;
 }
 
-enum
-{
-  GST_HLS_SINK_PROGRAM_DATE_NONE,
-  GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK,
-  GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS
-};
-
 #define GST_HLS_SINK_PROGRAM_DATE_TYPE \
   (gst_hls_sink_program_date_get_type ())
 
@@ -210,6 +203,8 @@ gst_hls_sink_finalize (GObject * object)
   g_free (sink->key_location);
   if (sink->playlist)
     gst_m3u8_playlist_free (sink->playlist);
+  if (sink->start_time)
+    g_date_time_unref (sink->start_time);
 
   G_OBJECT_CLASS (parent_class)->finalize ((GObject *) sink);
 }

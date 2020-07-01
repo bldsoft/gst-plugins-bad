@@ -36,13 +36,6 @@ enum
   GST_M3U8_PLAYLIST_TYPE_VOD,
 };
 
-enum
-{
-  PROGRAM_DATE_TIME_NONE,
-  PROGRAM_DATE_TIME_FIRST_CHUNK,
-  PROGRAM_DATE_TIME_ALL_CHUNKS
-};
-
 typedef struct _GstM3U8Entry GstM3U8Entry;
 
 struct _GstM3U8Entry
@@ -97,7 +90,7 @@ gst_m3u8_playlist_new (guint version, guint window_size, gboolean allow_cache)
   playlist->encryption_method = 0;
   playlist->key_location = "playlist.key";
   playlist->entries = g_queue_new ();
-  playlist->program_date_time_mode = 2; /* all chunks */
+  playlist->program_date_time_mode = GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS;
 
   return playlist;
 }
@@ -191,10 +184,10 @@ format_program_date_time (GstM3U8Playlist * playlist, GstM3U8Entry * entry,
   GTimeVal timeval = { };
 #endif
 
-  if (playlist->program_date_time_mode == PROGRAM_DATE_TIME_NONE)
+  if (playlist->program_date_time_mode == GST_HLS_SINK_PROGRAM_DATE_NONE)
     return;
-  if (playlist->program_date_time_mode == PROGRAM_DATE_TIME_FIRST_CHUNK &&
-      entry != playlist->entries->head->data)
+  if (playlist->program_date_time_mode == GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK
+      && entry != playlist->entries->head->data && !entry->discontinuous)
     return;
 
 #if GLIB_CHECK_VERSION(2, 62, 0)
