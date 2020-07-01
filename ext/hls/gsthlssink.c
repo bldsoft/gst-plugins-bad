@@ -60,7 +60,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_hls_sink_debug);
 #define DEFAULT_ENCRYPTION_METHOD 0     /* no encryption */
 #define DEFAULT_KEY_LOCATION "playlist.key"
 #define DEFAULT_KEY_URI "playlist.key"
-#define DEFAULT_SHOW_PROGRAM_DATE_TIME TRUE
+#define DEFAULT_PROGRAM_DATE_TIME_MODE 2        /* all chunks */
 
 #define GST_M3U8_PLAYLIST_VERSION 3
 
@@ -160,6 +160,35 @@ gst_hls_sink_encryption_method_get_type (void)
         encryption_method_types);
 
   return encryption_type;
+}
+
+enum
+{
+  GST_HLS_SINK_PROGRAM_DATE_NONE,
+  GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK,
+  GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS
+};
+
+#define GST_HLS_SINK_PROGRAM_DATE_TYPE \
+  (gst_hls_sink_program_date_get_type ())
+
+static GType
+gst_hls_sink_program_date_get_type (void)
+{
+  static GType program_date_mode = 0;
+  static const GEnumValue program_date_modes[] = {
+    {GST_HLS_SINK_PROGRAM_DATE_NONE, "Don't show tag", "never"},
+    {GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK, "Show only for first chunk",
+        "first"},
+    {GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS, "Show for each chunk", "all"},
+    {0, NULL, NULL}
+  };
+
+  if (!program_date_mode)
+    program_date_mode = g_enum_register_static ("GstHlsSinkProgramDateMode",
+        program_date_modes);
+
+  return program_date_mode;
 }
 
 static void
@@ -286,9 +315,10 @@ gst_hls_sink_class_init (GstHlsSinkClass * klass)
           RIXJOB_GSTHLSSINK_C_PATCH_VERSION,
           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
   g_object_class_install_property (gobject_class, PROP_SHOW_PROGRAM_DATE_TIME,
-      g_param_spec_boolean ("show-program-date-time",
-          "Use #EXT-X-PROGRAM-DATE-TIME tag",
-          "Use #EXT-X-PROGRAM-DATE-TIME tag", DEFAULT_SHOW_PROGRAM_DATE_TIME,
+      g_param_spec_enum ("program-date-time-mode",
+          "Mode for #EXT-X-PROGRAM-DATE-TIME tag",
+          "When to show #EXT-X-PROGRAM-DATE-TIME tag",
+          GST_HLS_SINK_PROGRAM_DATE_TYPE, DEFAULT_PROGRAM_DATE_TIME_MODE,
           G_PARAM_READWRITE));
 }
 
@@ -314,7 +344,6 @@ gst_hls_sink_init (GstHlsSink * sink)
   sink->encryption_method = DEFAULT_ENCRYPTION_METHOD;
   sink->key_location = g_strdup (DEFAULT_KEY_LOCATION);
   sink->key_uri = g_strdup (DEFAULT_KEY_URI);
-  sink->show_program_date_time = DEFAULT_SHOW_PROGRAM_DATE_TIME;
 
   /* haven't added a sink yet, make it is detected as a sink meanwhile */
   GST_OBJECT_FLAG_SET (sink, GST_ELEMENT_FLAG_SINK);
@@ -336,6 +365,10 @@ gst_hls_sink_reset (GstHlsSink * sink)
   sink->playlist =
       gst_m3u8_playlist_new (GST_M3U8_PLAYLIST_VERSION, sink->playlist_length,
       FALSE);
+  if (sink->start_time) {
+    g_date_time_unref (sink->start_time);
+    sink->start_time = NULL;
+  }
 }
 
 static gboolean
@@ -593,15 +626,7 @@ gst_hls_sink_handle_message (GstBin * bin, GstMessage * message)
       gboolean discont = FALSE;
       gchar *entry_location;
       const GstStructure *structure;
-#if GLIB_CHECK_VERSION (2, 62, 0)
-      GDateTime *program_date_time = sink->show_program_date_time
-          ? g_date_time_new_now_local ()
-          : NULL;
-#else
-      GTimeVal program_date_time = { };
-      if (sink->show_program_date_time)
-        g_get_current_time (&program_date_time);
-#endif
+      GDateTime *program_date_time;
 
       structure = gst_message_get_structure (message);
       if (strcmp (gst_structure_get_name (structure), "GstMultiFileSink"))
@@ -611,6 +636,9 @@ gst_hls_sink_handle_message (GstBin * bin, GstMessage * message)
       gst_structure_get_clock_time (structure, "running-time", &running_time);
       duration = running_time - sink->last_running_time;
       sink->last_running_time = running_time;
+
+      program_date_time = g_date_time_add_seconds (sink->start_time,
+          running_time / (double) GST_SECOND);
 
       GST_INFO_OBJECT (sink, "COUNT %d", sink->index);
       if (sink->playlist_root == NULL)
@@ -672,6 +700,9 @@ gst_hls_sink_change_state (GstElement * element, GstStateChange trans)
       }
       break;
     case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
+      if (sink->start_time)
+        g_date_time_unref (sink->start_time);
+      sink->start_time = g_date_time_new_now_local ();
       break;
     default:
       break;
@@ -745,7 +776,7 @@ gst_hls_sink_set_property (GObject * object, guint prop_id,
       sink->playlist->key_location = sink->key_uri;
       break;
     case PROP_SHOW_PROGRAM_DATE_TIME:
-      sink->show_program_date_time = g_value_get_boolean (value);
+      sink->playlist->program_date_time_mode = g_value_get_enum (value);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -800,7 +831,7 @@ gst_hls_sink_get_property (GObject * object, guint prop_id,
       g_value_set_uint (value, RIXJOB_GSTHLSSINK_C_PATCH_VERSION);
       break;
     case PROP_SHOW_PROGRAM_DATE_TIME:
-      g_value_set_boolean (value, sink->show_program_date_time);
+      g_value_set_enum (value, sink->playlist->program_date_time_mode);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
