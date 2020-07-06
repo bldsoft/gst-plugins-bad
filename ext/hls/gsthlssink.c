@@ -60,7 +60,7 @@ GST_DEBUG_CATEGORY_STATIC (gst_hls_sink_debug);
 #define DEFAULT_ENCRYPTION_METHOD 0     /* no encryption */
 #define DEFAULT_KEY_LOCATION "playlist.key"
 #define DEFAULT_KEY_URI "playlist.key"
-#define DEFAULT_PROGRAM_DATE_TIME_MODE GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS
+#define DEFAULT_PROGRAM_DATE_TIME_MODE GST_HLS_PROGRAM_DATE_TIME_ALL_CHUNKS
 #define DEFAULT_PROGRAM_DATE_TIME_SHIFT 0
 
 #define GST_M3U8_PLAYLIST_VERSION 3
@@ -162,28 +162,6 @@ gst_hls_sink_encryption_method_get_type (void)
         encryption_method_types);
 
   return encryption_type;
-}
-
-#define GST_HLS_SINK_PROGRAM_DATE_TYPE \
-  (gst_hls_sink_program_date_get_type ())
-
-static GType
-gst_hls_sink_program_date_get_type (void)
-{
-  static GType program_date_mode = 0;
-  static const GEnumValue program_date_modes[] = {
-    {GST_HLS_SINK_PROGRAM_DATE_NONE, "Don't show tag", "never"},
-    {GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK, "Show only for first chunk",
-        "first"},
-    {GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS, "Show for each chunk", "all"},
-    {0, NULL, NULL}
-  };
-
-  if (!program_date_mode)
-    program_date_mode = g_enum_register_static ("GstHlsSinkProgramDateMode",
-        program_date_modes);
-
-  return program_date_mode;
 }
 
 static void
@@ -315,7 +293,7 @@ gst_hls_sink_class_init (GstHlsSinkClass * klass)
       g_param_spec_enum ("program-date-time-mode",
           "Mode for #EXT-X-PROGRAM-DATE-TIME tag",
           "When to show #EXT-X-PROGRAM-DATE-TIME tag",
-          GST_HLS_SINK_PROGRAM_DATE_TYPE, DEFAULT_PROGRAM_DATE_TIME_MODE,
+          GST_HLS_PROGRAM_DATE_TIME_MODE_TYPE, DEFAULT_PROGRAM_DATE_TIME_MODE,
           G_PARAM_READWRITE));
   g_object_class_install_property (gobject_class, PROP_PROGRAM_DATE_TIME_SHIFT,
       g_param_spec_int64 ("program-date-time-shift", "PROGRAM-DATE-TIME shift",
@@ -655,8 +633,8 @@ gst_hls_sink_handle_message (GstBin * bin, GstMessage * message)
         g_free (name);
       }
 
-      gst_m3u8_playlist_add_entry_with_date (sink->playlist, entry_location,
-          NULL, duration, sink->index, discont, program_date_time);
+      gst_m3u8_playlist_add_entry (sink->playlist, entry_location, NULL,
+          duration, sink->index, discont, program_date_time);
       g_free (entry_location);
 
       if (sink->encryption_method != GST_HLS_SINK_ENC_NONE)

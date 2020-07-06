@@ -36,6 +36,26 @@ enum
   GST_M3U8_PLAYLIST_TYPE_VOD,
 };
 
+GType
+gst_hls_program_date_time_mode_get_type (void)
+{
+  static GType program_date_time_mode = 0;
+  static const GEnumValue program_date_time_modes[] = {
+    {GST_HLS_PROGRAM_DATE_TIME_NEVER, "Don't show tag", "never"},
+    {GST_HLS_PROGRAM_DATE_TIME_FIRST_CHUNK, "Show only for first chunk",
+        "first"},
+    {GST_HLS_PROGRAM_DATE_TIME_ALL_CHUNKS, "Show for each chunk", "all"},
+    {0, NULL, NULL}
+  };
+
+  if (!program_date_time_mode)
+    program_date_time_mode =
+        g_enum_register_static ("GstHlsSinkProgramDateMode",
+        program_date_time_modes);
+
+  return program_date_time_mode;
+}
+
 typedef struct _GstM3U8Entry GstM3U8Entry;
 
 struct _GstM3U8Entry
@@ -90,7 +110,7 @@ gst_m3u8_playlist_new (guint version, guint window_size, gboolean allow_cache)
   playlist->encryption_method = 0;
   playlist->key_location = "playlist.key";
   playlist->entries = g_queue_new ();
-  playlist->program_date_time_mode = GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS;
+  playlist->program_date_time_mode = GST_HLS_PROGRAM_DATE_TIME_ALL_CHUNKS;
 
   return playlist;
 }
@@ -107,18 +127,8 @@ gst_m3u8_playlist_free (GstM3U8Playlist * playlist)
 
 
 gboolean
-gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist,
-    const gchar * url, const gchar * title,
-    gfloat duration, guint index, gboolean discontinuous)
-{
-  return gst_m3u8_playlist_add_entry_with_date (playlist, url, title, duration,
-      index, discontinuous, NULL);
-}
-
-gboolean
-gst_m3u8_playlist_add_entry_with_date (GstM3U8Playlist * playlist,
-    const gchar * url, const gchar * title,
-    gfloat duration, guint index, gboolean discontinuous,
+gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist, const gchar * url,
+    const gchar * title, gfloat duration, guint index, gboolean discontinuous,
     GDateTime * program_date_time)
 {
   GstM3U8Entry *entry;
@@ -184,9 +194,9 @@ format_program_date_time (GstM3U8Playlist * playlist, GstM3U8Entry * entry,
   GTimeVal timeval = { };
 #endif
 
-  if (playlist->program_date_time_mode == GST_HLS_SINK_PROGRAM_DATE_NONE)
+  if (playlist->program_date_time_mode == GST_HLS_PROGRAM_DATE_TIME_NEVER)
     return;
-  if (playlist->program_date_time_mode == GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK
+  if (playlist->program_date_time_mode == GST_HLS_PROGRAM_DATE_TIME_FIRST_CHUNK
       && entry != playlist->entries->head->data && !entry->discontinuous)
     return;
 

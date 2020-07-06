@@ -55,6 +55,8 @@ struct _GstHlsSink2
   gchar *current_location;
   GstClockTime current_running_time_start;
   GQueue old_locations;
+  GDateTime *start_time;
+  gint64 program_date_time_shift;
 };
 
 struct _GstHlsSink2Class

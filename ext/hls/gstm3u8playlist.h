@@ -23,6 +23,7 @@
 #define __GST_M3U8_PLAYLIST_H__
 
 #include <glib.h>
+#include <glib-object.h>
 
 
 G_BEGIN_DECLS
@@ -32,10 +33,15 @@ extern const int RIXJOB_GSTM3U8PLAYLIST_C_PATCH_VERSION;
 
 enum
 {
-  GST_HLS_SINK_PROGRAM_DATE_NONE,
-  GST_HLS_SINK_PROGRAM_DATE_FIRST_CHUNK,
-  GST_HLS_SINK_PROGRAM_DATE_ALL_CHUNKS
+  GST_HLS_PROGRAM_DATE_TIME_NEVER,
+  GST_HLS_PROGRAM_DATE_TIME_FIRST_CHUNK,
+  GST_HLS_PROGRAM_DATE_TIME_ALL_CHUNKS
 };
+
+GType gst_hls_program_date_time_mode_get_type(void);
+
+#define GST_HLS_PROGRAM_DATE_TIME_MODE_TYPE     \
+    (gst_hls_program_date_time_mode_get_type ())
 
 typedef struct _GstM3U8Playlist GstM3U8Playlist;
 
@@ -67,16 +73,8 @@ gboolean          gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist,
                                                const gchar     * title,
                                                gfloat            duration,
                                                guint             index,
-                                               gboolean          discontinuous);
-
-gboolean gst_m3u8_playlist_add_entry_with_date(GstM3U8Playlist * playlist,
-                                               const gchar     * url,
-                                               const gchar     * title,
-                                               gfloat            duration,
-                                               guint             index,
                                                gboolean          discontinuous,
-                                               GDateTime       * program_date_time
-);
+                                               GDateTime       * program_date_time);
 
 gchar *           gst_m3u8_playlist_render (GstM3U8Playlist * playlist);
 
