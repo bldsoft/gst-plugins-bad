@@ -58,6 +58,8 @@ struct _GstHlsSink
   gchar *key_location;
   gchar *key_uri;
   unsigned char key[16];
+  GDateTime* start_time;
+  gint64 program_date_time_shift;
 };
 
 struct _GstHlsSinkClass

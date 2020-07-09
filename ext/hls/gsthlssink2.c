@@ -51,6 +51,8 @@ GST_DEBUG_CATEGORY_STATIC (gst_hls_sink2_debug);
 #define DEFAULT_TARGET_DURATION 15
 #define DEFAULT_PLAYLIST_LENGTH 5
 #define DEFAULT_SEND_KEYFRAME_REQUESTS TRUE
+#define DEFAULT_PROGRAM_DATE_TIME_MODE GST_HLS_PROGRAM_DATE_TIME_ALL_CHUNKS
+#define DEFAULT_PROGRAM_DATE_TIME_SHIFT 0
 
 #define GST_M3U8_PLAYLIST_VERSION 3
 
@@ -64,7 +66,14 @@ enum
   PROP_TARGET_DURATION,
   PROP_PLAYLIST_LENGTH,
   PROP_SEND_KEYFRAME_REQUESTS,
+  PROP_PROGRAM_DATE_TIME_MODE,
+  PROP_PROGRAM_DATE_TIME_SHIFT,
+  PROP_GSTHLSSINK2_H_PATCH_VERSION,
+  PROP_GSTHLSSINK2_C_PATCH_VERSION,
 };
+
+const int RIXJOB_GSTHLSSINK2_H_PATCH_VERSION = 1;
+const int RIXJOB_GSTHLSSINK2_C_PATCH_VERSION = 1;
 
 static GstStaticPadTemplate video_template = GST_STATIC_PAD_TEMPLATE ("video",
     GST_PAD_SINK,
@@ -112,6 +121,9 @@ gst_hls_sink2_finalize (GObject * object)
 
   g_queue_foreach (&sink->old_locations, (GFunc) g_free, NULL);
   g_queue_clear (&sink->old_locations);
+
+  if (sink->start_time)
+    g_date_time_unref (sink->start_time);
 
   G_OBJECT_CLASS (parent_class)->finalize ((GObject *) sink);
 }
@@ -185,6 +197,31 @@ gst_hls_sink2_class_init (GstHlsSink2Class * klass)
           "then the input must have keyframes in regular intervals",
           DEFAULT_SEND_KEYFRAME_REQUESTS,
           G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class, PROP_PROGRAM_DATE_TIME_MODE,
+      g_param_spec_enum ("program-date-time-mode",
+          "mode for #EXT-X-PROGRAM-DATE-TIME tag",
+          "When to show #EXT-X-PROGRAM-DATE-TIME tag",
+          GST_HLS_PROGRAM_DATE_TIME_MODE_TYPE, DEFAULT_PROGRAM_DATE_TIME_MODE,
+          G_PARAM_READWRITE));
+  g_object_class_install_property (gobject_class, PROP_PROGRAM_DATE_TIME_SHIFT,
+      g_param_spec_int64 ("program-date-time-shift", "PROGRAM-DATE-TIME shift",
+          "PROGRAM-DATE-TIME shift in nanoseconds", G_MININT64, G_MAXINT64,
+          DEFAULT_PROGRAM_DATE_TIME_SHIFT,
+          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class,
+      PROP_GSTHLSSINK2_H_PATCH_VERSION,
+      g_param_spec_uint ("gsthlssink2-h-patch-version",
+          "Version of patch for gsthlssink2.h file",
+          "gsthlssink.h patch version", 0, G_MAXUINT,
+          RIXJOB_GSTHLSSINK2_H_PATCH_VERSION,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
+  g_object_class_install_property (gobject_class,
+      PROP_GSTHLSSINK2_C_PATCH_VERSION,
+      g_param_spec_uint ("gsthlssink2-c-patch-version",
+          "Version of patch for gsthlssink2.c file",
+          "gsthlssink.c patch version", 0, G_MAXUINT,
+          RIXJOB_GSTHLSSINK2_C_PATCH_VERSION,
+          G_PARAM_READABLE | G_PARAM_STATIC_STRINGS));
 }
 
 static void
@@ -267,11 +304,18 @@ gst_hls_sink2_handle_message (GstBin * bin, GstMessage * message)
         } else if (gst_structure_has_name (s, "splitmuxsink-fragment-closed")) {
           GstClockTime running_time;
           gchar *entry_location;
+          GDateTime *program_date_time;
+          double chunk_time;
 
           g_assert (strcmp (sink->current_location, gst_structure_get_string (s,
                       "location")) == 0);
 
           gst_structure_get_clock_time (s, "running-time", &running_time);
+
+          chunk_time = sink->current_running_time_start / (double) GST_SECOND +
+              sink->program_date_time_shift / (double) GST_SECOND;
+          program_date_time = g_date_time_add_seconds (sink->start_time,
+              chunk_time);
 
           GST_INFO_OBJECT (sink, "COUNT %d", sink->index);
           if (sink->playlist_root == NULL) {
@@ -282,9 +326,9 @@ gst_hls_sink2_handle_message (GstBin * bin, GstMessage * message)
             g_free (name);
           }
 
-          gst_m3u8_playlist_add_entry (sink->playlist, entry_location,
-              NULL, running_time - sink->current_running_time_start,
-              sink->index++, FALSE);
+          gst_m3u8_playlist_add_entry (sink->playlist, entry_location, NULL,
+              running_time - sink->current_running_time_start, sink->index++,
+              FALSE, program_date_time);
           g_free (entry_location);
 
           gst_hls_sink2_write_playlist (sink);
@@ -387,6 +431,12 @@ gst_hls_sink2_change_state (GstElement * element, GstStateChange trans)
         return GST_STATE_CHANGE_FAILURE;
       }
       break;
+    case GST_STATE_CHANGE_PAUSED_TO_PLAYING:
+      if (sink->start_time) {
+        g_date_time_unref (sink->start_time);
+      }
+      sink->start_time = g_date_time_new_now_local ();
+      break;
     default:
       break;
   }
@@ -449,6 +499,12 @@ gst_hls_sink2_set_property (GObject * object, guint prop_id,
             sink->send_keyframe_requests, NULL);
       }
       break;
+    case PROP_PROGRAM_DATE_TIME_MODE:
+      sink->playlist->program_date_time_mode = g_value_get_enum (value);
+      break;
+    case PROP_PROGRAM_DATE_TIME_SHIFT:
+      sink->program_date_time_shift = g_value_get_int64 (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -482,6 +538,18 @@ gst_hls_sink2_get_property (GObject * object, guint prop_id,
       break;
     case PROP_SEND_KEYFRAME_REQUESTS:
       g_value_set_boolean (value, sink->send_keyframe_requests);
+      break;
+    case PROP_PROGRAM_DATE_TIME_MODE:
+      g_value_set_enum (value, sink->playlist->program_date_time_mode);
+      break;
+    case PROP_PROGRAM_DATE_TIME_SHIFT:
+      g_value_set_int64 (value, sink->program_date_time_shift);
+      break;
+    case PROP_GSTHLSSINK2_H_PATCH_VERSION:
+      g_value_set_uint (value, RIXJOB_GSTHLSSINK2_H_PATCH_VERSION);
+      break;
+    case PROP_GSTHLSSINK2_C_PATCH_VERSION:
+      g_value_set_uint (value, RIXJOB_GSTHLSSINK2_C_PATCH_VERSION);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
