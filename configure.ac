@@ -2528,6 +2528,7 @@ gst/audiovisualizers/Makefile
 gst/autoconvert/Makefile
 gst/bayer/Makefile
 gst/camerabin2/Makefile
+gst/clocksync/Makefile
 gst/coloreffects/Makefile
 gst/debugutils/Makefile
 gst/dvbsuboverlay/Makefile
