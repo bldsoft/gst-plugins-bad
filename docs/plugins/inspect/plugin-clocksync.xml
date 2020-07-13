@@ -1,0 +1,34 @@
+<plugin>
+  <name>clocksync</name>
+  <description>clocksync</description>
+  <filename>../../gst/clocksync/.libs/libgstclocksync.so</filename>
+  <basename>libgstcoloreffects.so</basename>
+  <version>1.16.2</version>
+  <license>LGPL</license>
+  <source>gst-plugins-bad</source>
+  <package>GStreamer Bad Plug-ins source release</package>
+  <origin>Unknown package origin</origin>
+  <elements>
+    <element>
+      <name>clocksync</name>
+      <longname>clocksync</longname>
+      <class>Filter/Effect/Video</class>
+      <description>Synchronise buffers to the clock</description>
+      <author>an Schmidt <jan@centricular.com></author>
+      <pads>
+        <caps>
+          <name>sink</name>
+          <direction>sink</direction>
+          <presence>always</presence>
+          <details>ANY</details>
+        </caps>
+        <caps>
+          <name>src</name>
+          <direction>source</direction>
+          <presence>always</presence>
+          <details>ANY</details>
+        </caps>
+      </pads>
+    </element>
+  </elements>
+</plugin>

@@ -117,6 +117,7 @@ EXTRA_HFILES = \
 	$(top_srcdir)/gst/audiovisualizers/gstsynaescope.h \
 	$(top_srcdir)/gst/audiovisualizers/gstwavescope.h \
 	$(top_srcdir)/gst/camerabin2/gstcamerabin2.h \
+	$(top_srcdir)/gst/clocksync/gstclocksync.h \
 	$(top_srcdir)/gst/coloreffects/gstcoloreffects.h \
 	$(top_srcdir)/gst/debugutils/fpsdisplaysink.h \
 	$(top_srcdir)/gst/dvdspu/gstdvdspu.h \
