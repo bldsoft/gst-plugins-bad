@@ -1,6 +1,7 @@
 plugin_LTLIBRARIES = libgstclocksync.la
 
-libgstcamerabin_la_SOURCES = gstclocksync.c
+libgstcamerabin_la_SOURCES = gstclocksync.c \
+    gstplugin.c
 
 libgstcamerabin_la_CFLAGS = \
 	$(GST_PLUGINS_BAD_CFLAGS) \
