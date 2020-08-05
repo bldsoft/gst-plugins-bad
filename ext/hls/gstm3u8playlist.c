@@ -190,7 +190,7 @@ format_program_date_time (GstM3U8Playlist * playlist, GstM3U8Entry * entry,
     GString * playlist_str)
 {
   gchar *time_str = NULL;
-  gint microseconds = 0;
+  gint milliseconds = 0;
 
   if (playlist->program_date_time_mode == GST_HLS_PROGRAM_DATE_TIME_NEVER)
     return;
@@ -199,10 +199,10 @@ format_program_date_time (GstM3U8Playlist * playlist, GstM3U8Entry * entry,
     return;
 
   time_str = g_date_time_format (entry->program_date_time, "%FT%T");
-  microseconds = g_date_time_get_microsecond (entry->program_date_time) / 1000;
+  milliseconds = g_date_time_get_microsecond (entry->program_date_time) / 1000;
   if (time_str)
     g_string_append_printf (playlist_str, "#EXT-X-PROGRAM-DATE-TIME:%s.%03dZ\n",
-        time_str, microseconds);
+        time_str, milliseconds);
 
   g_free (time_str);
 }
