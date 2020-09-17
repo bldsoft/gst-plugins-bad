@@ -60,6 +60,7 @@ _parse_slice_event (guint8 ** orig_data, guint8 * end, gboolean insert_event)
 {
   GstMpegtsSCTESpliceEvent *event = g_slice_new0 (GstMpegtsSCTESpliceEvent);
   guint8 *data = *orig_data;
+  guint8 component_count;
 
   /* Note : +6 is because of the final descriptor_loop_length and CRC */
   if (data + 5 + 6 > end)
@@ -90,10 +91,14 @@ _parse_slice_event (guint8 ** orig_data, guint8 * end, gboolean insert_event)
     data += 1;
 
     if (event->program_splice_flag == 0) {
-      GST_ERROR ("Component splice flag not supported !");
-      goto error;
+      // GST_ERROR ("Component splice flag not supported !");
+      // goto error;
+      component_count = *data;
+      if (component_count > 0) {
+        GST_ERROR ("Component count: %d", component_count);
+      }
+      data += 1;
     }
-
     if (event->splice_immediate_flag == 0) {
       event->program_splice_time_specified = *data >> 7;
       if (event->program_splice_time_specified) {
@@ -155,8 +160,10 @@ _gst_mpegts_scte_sit_copy (GstMpegtsSCTESIT * sit)
 static void
 _gst_mpegts_scte_sit_free (GstMpegtsSCTESIT * sit)
 {
-  g_ptr_array_unref (sit->splices);
-  g_ptr_array_unref (sit->descriptors);
+  if (sit->splices)
+    g_ptr_array_unref (sit->splices);
+  if (sit->descriptors)
+    g_ptr_array_unref (sit->descriptors);
   g_slice_free (GstMpegtsSCTESIT, sit);
 }
 
@@ -284,7 +291,7 @@ _parse_sit (GstMpegtsSection * section)
   if (data != end - 4) {
     GST_WARNING ("PID %d invalid SIT parsed %d length %d",
         section->pid, (gint) (data - section->data), section->section_length);
-    goto error;
+    //goto error;
   }
 
   return sit;
