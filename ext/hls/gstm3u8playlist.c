@@ -148,6 +148,10 @@ gst_m3u8_playlist_add_entry (GstM3U8Playlist * playlist, const gchar * url,
       GstM3U8Entry *old_entry;
 
       old_entry = g_queue_pop_head (playlist->entries);
+
+      if (old_entry->discontinuous)
+        playlist->discontinuity_sequence_number++;
+
       gst_m3u8_entry_free (old_entry);
     }
   }
@@ -227,6 +231,11 @@ gst_m3u8_playlist_render (GstM3U8Playlist * playlist)
   g_string_append_printf (playlist_str, "#EXT-X-MEDIA-SEQUENCE:%d\n",
       playlist->sequence_number - playlist->entries->length);
 
+  if (playlist->discontinuity_sequence_number > 0) {
+    g_string_append_printf (playlist_str, "#EXT-X-DISCONTINUITY-SEQUENCE:%d\n",
+        playlist->discontinuity_sequence_number);
+  }
+
   g_string_append_printf (playlist_str, "#EXT-X-TARGETDURATION:%u\n",
       gst_m3u8_playlist_target_duration (playlist));
 
@@ -242,8 +251,7 @@ gst_m3u8_playlist_render (GstM3U8Playlist * playlist)
   for (l = playlist->entries->head; l != NULL; l = l->next) {
     GstM3U8Entry *entry = l->data;
 
-    if (entry->discontinuous)
-      g_string_append (playlist_str, "#EXT-X-DISCONTINUITY\n");
+    format_program_date_time (playlist, entry, playlist_str);
 
     format_program_date_time (playlist, entry, playlist_str);
 
@@ -258,10 +266,36 @@ gst_m3u8_playlist_render (GstM3U8Playlist * playlist)
     }
 
     g_string_append_printf (playlist_str, "%s\n", entry->url);
+
+    if (entry->discontinuous && l->next != NULL)
+      g_string_append (playlist_str, "#EXT-X-DISCONTINUITY\n");
   }
 
   if (playlist->end_list)
     g_string_append (playlist_str, "#EXT-X-ENDLIST");
 
   return g_string_free (playlist_str, FALSE);
+}
+
+void
+gst_m3u8_playlist_add_discontinuity (GstM3U8Playlist * playlist)
+{
+  GList *l = playlist->entries->tail;
+  if (l != NULL) {
+    GstM3U8Entry *entry = l->data;
+    entry->discontinuous = TRUE;
+  }
+}
+
+guint
+gst_m3u8_playlist_get_discontinuity_number (GstM3U8Playlist * playlist)
+{
+  guint result = playlist->discontinuity_sequence_number;
+  for (GList * l = playlist->entries->head; l != NULL; l = l->next) {
+    GstM3U8Entry *entry = l->data;
+    if (entry->discontinuous) {
+      result++;
+    }
+  }
+  return result;
 }
