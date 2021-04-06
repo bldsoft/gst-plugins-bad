@@ -176,6 +176,7 @@ struct GstBaseTsMux {
   guint pcr_interval;
   guint scte35_pid;
   guint scte35_null_interval;
+  guint64 timestamp_shift;
 
   /* state */
   gboolean first;
